@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pacu Web GUI</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#161b22; --panel2:#1c2330; --line:#2b3340;
+    --text:#d7dee8; --muted:#8a94a6; --accent:#f0883e; --accent2:#539bf5;
+    --green:#57ab5a; --red:#e5534b; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--text);height:100vh;overflow:hidden}
+  header{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--panel);
+    border-bottom:1px solid var(--line)}
+  header h1{font-size:16px;margin:0;letter-spacing:.5px}
+  header .logo{color:var(--accent);font-weight:800}
+  header .spacer{flex:1}
+  .pill{font-size:12px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);
+    padding:4px 10px;border-radius:20px}
+  .pill b{color:var(--text)}
+  .layout{display:grid;grid-template-columns:320px 1fr;height:calc(100vh - 49px)}
+  .side{background:var(--panel);border-right:1px solid var(--line);overflow:auto;padding:14px}
+  .main{display:grid;grid-template-rows:1fr 40%;height:100%;min-width:0}
+  .modwrap{overflow:auto;padding:14px;border-bottom:1px solid var(--line);min-height:0}
+  .term{background:#0a0d12;overflow:auto;padding:12px 14px;font-family:var(--mono);font-size:12.5px;
+    line-height:1.5;white-space:pre-wrap;word-break:break-word;min-height:0}
+  h2{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);
+    margin:18px 0 8px;font-weight:700}
+  h2:first-child{margin-top:0}
+  label{display:block;font-size:12px;color:var(--muted);margin:8px 0 3px}
+  input,select,textarea,button{font-family:inherit;font-size:13px}
+  input[type=text],input[type=password],select,textarea{width:100%;background:var(--panel2);
+    border:1px solid var(--line);color:var(--text);border-radius:6px;padding:7px 9px;outline:none}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent2)}
+  button{cursor:pointer;background:var(--panel2);border:1px solid var(--line);color:var(--text);
+    border-radius:6px;padding:7px 12px;transition:.12s}
+  button:hover{border-color:var(--accent2)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#1a1205;font-weight:700}
+  button.primary:hover{filter:brightness(1.08)}
+  button.sm{padding:4px 8px;font-size:12px}
+  .row{display:flex;gap:8px}
+  .row>*{flex:1}
+  .muted{color:var(--muted);font-size:12px}
+  .search{position:sticky;top:0;background:var(--panel);padding-bottom:10px;z-index:3}
+  .catbar{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}
+  .chip{font-size:11.5px;padding:3px 9px;border-radius:14px;border:1px solid var(--line);
+    background:var(--panel2);color:var(--muted);cursor:pointer}
+  .chip.active{background:var(--accent2);border-color:var(--accent2);color:#06131f;font-weight:700}
+  .modlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+  .mod{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:11px 12px;cursor:pointer}
+  .mod:hover{border-color:var(--accent2)}
+  .mod .nm{font-family:var(--mono);font-size:12.5px;color:var(--accent)}
+  .mod .ol{font-size:12px;color:var(--muted);margin-top:4px}
+  .mod .cat{float:right;font-size:10px;color:var(--muted);border:1px solid var(--line);
+    border-radius:10px;padding:1px 7px}
+  .cols{color:var(--muted)}
+  /* tabs */
+  .tabs{display:flex;align-items:center;gap:6px;margin-bottom:12px;border-bottom:1px solid var(--line);padding-bottom:10px}
+  .tab{background:transparent;border:1px solid transparent;color:var(--muted);padding:6px 12px;border-radius:6px}
+  .tab.active{background:var(--panel2);border-color:var(--line);color:var(--text)}
+  .tab:hover{color:var(--text)}
+  /* session data */
+  .svc{background:var(--panel2);border:1px solid var(--line);border-radius:8px;margin-bottom:10px;overflow:hidden}
+  .svc h3{margin:0;font-size:13px;font-family:var(--mono);color:var(--accent);padding:9px 12px;cursor:pointer;
+    display:flex;justify-content:space-between;align-items:center}
+  .svc h3 .cnt{font-size:11px;color:var(--muted);font-family:system-ui}
+  .svc pre{margin:0;padding:10px 12px;border-top:1px solid var(--line);background:#0a0d12;overflow:auto;
+    max-height:360px;font-family:var(--mono);font-size:12px;line-height:1.5;color:var(--text)}
+  .svc.collapsed pre{display:none}
+  /* loot */
+  .loot{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:12px;min-height:0}
+  .lootlist{border:1px solid var(--line);border-radius:8px;overflow:auto;max-height:60vh;background:var(--panel2)}
+  .lootf{padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer;font-size:12px}
+  .lootf:hover{background:#1f2836}
+  .lootf.active{background:var(--accent2);color:#06131f}
+  .lootf.active .meta{color:#0a1b2b}
+  .lootf .pn{font-family:var(--mono);word-break:break-all}
+  .lootf .meta{color:var(--muted);font-size:11px;margin-top:2px}
+  .lootpane{display:grid;grid-template-rows:auto 1fr;gap:8px;min-height:0}
+  .lootbar{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);
+    border-radius:8px;padding:7px 10px}
+  .lootbar .fn{font-family:var(--mono);font-size:12px;color:var(--accent);word-break:break-all}
+  .lootbar .sz{font-size:11px;color:var(--muted)}
+  .lootview{border:1px solid var(--line);border-radius:8px;background:#0a0d12;overflow:auto;max-height:60vh;padding:12px 14px;
+    font-family:var(--mono);font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-word;color:var(--text)}
+  .empty{color:var(--muted);font-size:13px;padding:14px}
+  @media(max-width:900px){.loot{grid-template-columns:1fr}}
+  /* module detail */
+  .detail{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .detail .nm{font-family:var(--mono);font-size:16px;color:var(--accent)}
+  .detail .desc{font-size:13px;color:var(--text);margin:8px 0 4px;line-height:1.5}
+  .argtbl{margin-top:10px}
+  .argrow{display:grid;grid-template-columns:200px 1fr;gap:10px;align-items:start;padding:7px 0;
+    border-top:1px solid var(--line)}
+  .argrow .fl{font-family:var(--mono);font-size:12px;color:var(--accent2)}
+  .argrow .hp{font-size:11.5px;color:var(--muted);margin-top:3px}
+  .switch{display:flex;align-items:center;gap:7px}
+  .switch input{width:auto}
+  .cmdprev{font-family:var(--mono);font-size:12px;background:#0a0d12;border:1px solid var(--line);
+    border-radius:6px;padding:8px 10px;color:var(--green);margin-top:12px;white-space:pre-wrap;word-break:break-all}
+  .bar{display:flex;gap:8px;align-items:center;margin-top:12px}
+  .termbar{display:flex;gap:8px;align-items:center;padding:7px 12px;background:var(--panel);
+    border-bottom:1px solid var(--line)}
+  .termbar .t{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+  .promptline{display:flex;gap:8px;padding:10px 12px;background:#1a150a;border-top:2px solid var(--accent);
+    align-items:center;animation:promptpulse 1.4s ease-in-out infinite}
+  .promptline input{flex:1}
+  .promptline.hidden{display:none}
+  .promptline .ask{font-size:11px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.6px}
+  @keyframes promptpulse{0%,100%{box-shadow:inset 0 0 0 0 rgba(240,136,62,0)}50%{box-shadow:inset 0 3px 14px -6px rgba(240,136,62,.7)}}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button:disabled:hover{border-color:var(--line)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+  .dot.on{background:var(--green)}
+  .dot.busy{background:var(--accent)}
+  .toast{position:fixed;bottom:16px;right:16px;background:var(--panel2);border:1px solid var(--line);
+    border-left:3px solid var(--accent2);padding:10px 14px;border-radius:8px;font-size:13px;opacity:0;
+    transform:translateY(8px);transition:.2s;z-index:50}
+  .toast.show{opacity:1;transform:none}
+  .toast.err{border-left-color:var(--red)}
+  code{font-family:var(--mono);color:var(--accent2)}
+  .quick{display:flex;flex-wrap:wrap;gap:6px}
+  .regionchips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px;min-height:22px}
+  .rchip{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-family:var(--mono);
+    background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:2px 5px 2px 9px;color:var(--text)}
+  .rchip.all{color:var(--accent);border-color:var(--accent)}
+  .rchip button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;padding:0 2px}
+  .rchip button:hover{color:var(--red);border-color:transparent}
+  a{color:var(--accent2)}
+  @media(max-width:860px){.layout{grid-template-columns:1fr}.side{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="logo">Pacu</span> Web GUI</h1>
+  <span class="dot" id="connDot" title="stream"></span>
+  <div class="spacer"></div>
+  <span class="pill">session <b id="hSession">—</b></span>
+  <span class="pill">keys <b id="hKeys">none</b></span>
+  <span class="pill">regions <b id="hRegions">all</b></span>
+</header>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="side">
+    <h2>Session</h2>
+    <label>Active session</label>
+    <div class="row">
+      <select id="sessSelect"></select>
+      <button class="sm" id="sessActivate">Switch</button>
+    </div>
+    <label>New session</label>
+    <div class="row">
+      <input type="text" id="sessNew" placeholder="engagement-name">
+      <button class="sm" id="sessCreate">Create</button>
+    </div>
+
+    <h2>AWS Keys</h2>
+    <label>Key alias</label>
+    <input type="text" id="kAlias" placeholder="target-user">
+    <label>Access key ID</label>
+    <input type="text" id="kId" placeholder="AKIA... / ASIA...">
+    <label>Secret access key</label>
+    <input type="password" id="kSecret" placeholder="secret">
+    <label>Session token (optional, temp creds)</label>
+    <textarea id="kToken" rows="2" placeholder="only for ASIA... temp keys"></textarea>
+    <div class="bar"><button class="primary" id="kSave">Set Keys</button></div>
+    <div class="muted" id="kCurrent" style="margin-top:8px"></div>
+
+    <h2>Default Regions</h2>
+    <div class="muted" style="margin-bottom:7px">Used when a module is run with no <code>--regions</code>. <b>All</b> makes Pacu prompt on each run.</div>
+    <div class="regionchips" id="regionChips"></div>
+    <div class="row">
+      <select id="regionAdd"><option value="">+ Add region…</option></select>
+      <button class="sm" id="regionAll" style="flex:0 0 auto">All</button>
+    </div>
+
+    <h2>Quick actions</h2>
+    <div class="quick">
+      <button class="sm" data-cmd="whoami">whoami</button>
+      <button class="sm" data-cmd="regions">regions</button>
+      <button class="sm" data-cmd="run iam__detect_honeytokens">honeytoken check</button>
+      <button class="sm" data-cmd="run aws__enum_account">enum account</button>
+      <button class="sm" data-cmd="run iam__enum_permissions">enum perms</button>
+      <button class="sm" data-cmd="services">services</button>
+      <button class="sm" data-cmd="data">data</button>
+    </div>
+
+    <h2>Raw command</h2>
+    <div class="muted" style="margin-bottom:6px">Anything you'd type at the <code>Pacu&gt;</code> prompt.</div>
+    <div class="row">
+      <input type="text" id="rawCmd" placeholder="run ec2__enum --instances">
+      <button class="sm" id="rawRun">Run</button>
+    </div>
+    <div class="muted" style="margin-top:14px;line-height:1.5">
+      Local tool. Everything runs through the real Pacu engine against whatever AWS
+      keys you set. Use only on accounts you are authorized to test.
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <section class="main">
+    <div class="modwrap">
+      <div class="tabs">
+        <button class="tab active" data-tab="modules">Modules</button>
+        <button class="tab" data-tab="data">Session Data</button>
+        <button class="tab" data-tab="loot">Loot / Files</button>
+        <div style="flex:1"></div>
+        <button class="sm" id="tabRefresh" style="display:none">Refresh</button>
+      </div>
+
+      <div id="tab-modules">
+        <div class="search">
+          <div class="row">
+            <input type="text" id="modSearch" placeholder="Search modules by name, service or description…">
+            <button class="sm" id="modBack" style="flex:0 0 auto;display:none">&larr; All modules</button>
+          </div>
+          <div class="catbar" id="catbar"></div>
+        </div>
+        <div id="modView"><div class="modlist" id="modList"></div></div>
+      </div>
+
+      <div id="tab-data" hidden>
+        <div class="muted" id="dataMeta" style="margin-bottom:10px"></div>
+        <div id="dataView"></div>
+      </div>
+
+      <div id="tab-loot" hidden>
+        <div class="muted" id="lootMeta" style="margin-bottom:10px"></div>
+        <div class="loot">
+          <div class="lootlist" id="lootList"></div>
+          <div class="lootpane">
+            <div class="lootbar" id="lootBar" hidden>
+              <span class="fn" id="lootFn"></span>
+              <span class="sz" id="lootSz"></span>
+              <div style="flex:1"></div>
+              <button class="sm" id="lootDownload">Download</button>
+            </div>
+            <div class="lootview" id="lootView"><span class="empty">Select a file to view its contents.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-rows:auto 1fr auto;min-height:0">
+      <div class="termbar">
+        <span class="t">Output</span>
+        <span class="dot" id="busyDot"></span>
+        <span class="muted" id="busyText"></span>
+        <div style="flex:1"></div>
+        <button class="sm" id="termClear">Clear</button>
+      </div>
+      <div class="term" id="term"></div>
+      <div class="promptline hidden" id="promptLine">
+        <span class="ask">Pacu asks</span>
+        <span style="align-self:center;font-family:var(--mono);font-size:12px" id="promptLabel">?</span>
+        <input type="text" id="promptInput" placeholder="type answer (e.g. y) and press Enter…">
+        <button class="sm primary" id="promptSend">Send</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+let MODULES = [], activeCat = "ALL", selected = null, busy = false;
+
+function toast(msg, err){
+  const t = $("#toast"); t.textContent = msg; t.className = "toast show" + (err?" err":"");
+  setTimeout(()=>t.className = "toast" + (err?" err":""), 2600);
+}
+async function api(path, body){
+  const opt = {headers:{"Content-Type":"application/json"}};
+  if(body){opt.method="POST";opt.body=JSON.stringify(body);}
+  const r = await fetch(path, opt);
+  const j = await r.json().catch(()=>({}));
+  if(!r.ok || j.ok===false) throw new Error(j.error || ("HTTP "+r.status));
+  return j;
+}
+
+/* ---------- terminal + SSE ---------- */
+const term = $("#term");
+function writeTerm(s){
+  const atBottom = term.scrollHeight - term.scrollTop - term.clientHeight < 40;
+  term.appendChild(document.createTextNode(s));
+  if(atBottom) term.scrollTop = term.scrollHeight;
+}
+let awaitingInput = false;
+function setBusy(b){
+  busy = b;
+  $("#busyDot").className = "dot " + (b?"busy":"on");
+  if(!b){ awaitingInput = false; }
+  $("#busyText").textContent = b ? (awaitingInput ? "waiting for your input ↓" : "running…") : "idle";
+  const rr = $("#rawRun"); if(rr) rr.disabled = b;
+  const rm = $("#runModule"); if(rm) rm.disabled = b;
+}
+function showPrompt(label){
+  awaitingInput = true;
+  setBusy(true);
+  $("#promptLabel").textContent = label.trim() ? label.trim().slice(-80) : "?";
+  const pl = $("#promptLine");
+  pl.classList.remove("hidden");
+  term.scrollTop = term.scrollHeight;         // make sure the question is visible
+  pl.scrollIntoView({block:"nearest"});
+  $("#promptInput").focus();
+}
+function hidePrompt(){ awaitingInput = false; $("#promptLine").classList.add("hidden"); $("#promptInput").value=""; }
+
+function connectStream(){
+  const es = new EventSource("/api/stream");
+  es.onopen = ()=> $("#connDot").className = "dot on";
+  es.onerror = ()=> { $("#connDot").className = "dot"; };
+  es.onmessage = ev => {
+    const m = JSON.parse(ev.data);
+    if(m.type === "out") writeTerm(m.data);
+    else if(m.type === "prompt"){ setBusy(true); showPrompt(m.data || ""); }
+    else if(m.type === "done"){
+      setBusy(false); hidePrompt(); refreshState();
+      if(currentTab === "data") loadData();
+      else if(currentTab === "loot") loadLoot();
+    }
+    else if(m.type === "hello"){ $("#connDot").className = "dot on"; }
+  };
+}
+async function sendInput(){
+  const v = $("#promptInput").value;
+  hidePrompt();
+  try{ await api("/api/input", {value:v}); }catch(e){ toast(e.message, true); }
+}
+$("#promptSend").onclick = sendInput;
+$("#promptInput").addEventListener("keydown", e=>{ if(e.key==="Enter") sendInput(); });
+$("#termClear").onclick = ()=> term.textContent = "";
+
+/* ---------- run helpers ---------- */
+async function runCommand(cmd){
+  if(!cmd.trim()) return;
+  if(busy){
+    if(awaitingInput) toast("Pacu is waiting for your answer below — respond to the prompt first.", true);
+    else toast("A command is already running. Wait for it to finish.", true);
+    return;
+  }
+  setBusy(true);
+  try{ await api("/api/run", {command:cmd}); }
+  catch(e){ setBusy(false); toast(e.message, true); }
+}
+document.querySelectorAll("[data-cmd]").forEach(b=> b.onclick = ()=> runCommand(b.dataset.cmd));
+$("#rawRun").onclick = ()=> runCommand($("#rawCmd").value);
+$("#rawCmd").addEventListener("keydown", e=>{ if(e.key==="Enter") runCommand($("#rawCmd").value); });
+
+/* ---------- state ---------- */
+async function refreshState(){
+  let s; try{ s = await api("/api/state"); }catch(e){ return; }
+  if(!s.ready) return;
+  $("#hSession").textContent = s.active_session;
+  $("#hKeys").textContent = s.key_alias || (s.access_key_id ? "set" : "none");
+  $("#hRegions").textContent = (s.regions||[]).join(", ") || "all";
+  // keep the sidebar region chips in sync with the engine
+  const sr = (s.regions && s.regions.length) ? s.regions : ["all"];
+  if(JSON.stringify(sr) !== JSON.stringify(currentRegions)){ currentRegions = sr; renderRegions(); }
+  const sel = $("#sessSelect"); sel.innerHTML = "";
+  (s.sessions||[]).forEach(n=>{
+    const o = document.createElement("option"); o.value=o.textContent=n;
+    if(n===s.active_session) o.selected = true; sel.appendChild(o);
+  });
+  $("#kCurrent").innerHTML = s.access_key_id
+    ? `current: <code>${s.key_alias||"(no alias)"}</code> — ${s.access_key_id}${s.has_session_token?" (+token)":""}`
+    : "no keys set in this session";
+  // Reconcile busy/prompt state with the engine, in case an SSE event was missed during a reconnect.
+  if(s.awaiting_input && $("#promptLine").classList.contains("hidden")){
+    showPrompt("(waiting for input)");
+  } else if(!s.awaiting_input && awaitingInput){
+    hidePrompt();
+  }
+  if(!s.engine_busy && !s.awaiting_input && busy){
+    setBusy(false);   // recover if a 'done' event was missed
+  }
+}
+
+/* ---------- default regions ---------- */
+let allRegions = [];
+let currentRegions = ["all"];
+function regionsIsAll(){ return currentRegions.length === 1 && currentRegions[0] === "all"; }
+function renderRegions(){
+  const chips = $("#regionChips"); chips.innerHTML = "";
+  if(regionsIsAll()){
+    const c = document.createElement("span"); c.className = "rchip all"; c.textContent = "all regions";
+    chips.appendChild(c);
+  } else {
+    currentRegions.forEach(r=>{
+      const c = document.createElement("span"); c.className = "rchip";
+      c.innerHTML = `${esc(r)} <button title="remove">×</button>`;
+      c.querySelector("button").onclick = ()=> setRegions(currentRegions.filter(x=>x!==r));
+      chips.appendChild(c);
+    });
+  }
+  const sel = $("#regionAdd"); sel.innerHTML = '<option value="">+ Add region…</option>';
+  allRegions.filter(r=> regionsIsAll() || !currentRegions.includes(r)).forEach(r=>{
+    const o = document.createElement("option"); o.value = o.textContent = r; sel.appendChild(o);
+  });
+  $("#regionAll").disabled = regionsIsAll();
+}
+async function loadRegions(){
+  try{ const d = await api("/api/regions"); allRegions = d.all || []; currentRegions = d.current || ["all"]; renderRegions(); }
+  catch(e){}
+}
+async function setRegions(regions){
+  try{
+    if(!regions || !regions.length) await api("/api/regions", {all:true});
+    else await api("/api/regions", {regions});
+    toast("Regions updated");
+    setTimeout(refreshState, 400);   // header + chips resync once the engine applies it
+  }catch(e){ toast(e.message, true); }
+}
+$("#regionAdd").onchange = ()=>{
+  const r = $("#regionAdd").value; if(!r) return;
+  const next = regionsIsAll() ? [r] : Array.from(new Set([...currentRegions, r]));
+  setRegions(next);
+};
+$("#regionAll").onclick = ()=> setRegions([]);   // [] → all
+
+/* ---------- sessions & keys ---------- */
+$("#sessActivate").onclick = async ()=>{
+  try{ await api("/api/session", {action:"activate", name:$("#sessSelect").value}); toast("Switching session…"); }
+  catch(e){ toast(e.message, true); }
+};
+$("#sessCreate").onclick = async ()=>{
+  const name = $("#sessNew").value.trim();
+  if(!name) return toast("Enter a session name", true);
+  try{ await api("/api/session", {action:"new", name}); $("#sessNew").value=""; toast("Session created…"); }
+  catch(e){ toast(e.message, true); }
+};
+$("#kSave").onclick = async ()=>{
+  const body = {
+    alias: $("#kAlias").value, access_key_id: $("#kId").value,
+    secret_access_key: $("#kSecret").value, session_token: $("#kToken").value
+  };
+  if(body.alias.trim().length < 2) return toast("Alias must be ≥ 2 chars", true);
+  try{ await api("/api/keys", body); toast("Keys set."); $("#kSecret").value=""; }
+  catch(e){ toast(e.message, true); }
+};
+
+/* ---------- module browser ---------- */
+async function loadModules(){
+  MODULES = await api("/api/modules");
+  const cats = ["ALL", ...Array.from(new Set(MODULES.map(m=>m.category))).sort()];
+  const bar = $("#catbar"); bar.innerHTML = "";
+  cats.forEach(c=>{
+    const el = document.createElement("span");
+    el.className = "chip" + (c===activeCat?" active":""); el.textContent = c;
+    el.onclick = ()=>{ activeCat=c; renderList(); document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active', x.textContent===c)); };
+    bar.appendChild(el);
+  });
+  renderList();
+}
+function renderList(){
+  selected = null; $("#modBack").style.display = "none";
+  const q = $("#modSearch").value.toLowerCase().trim();
+  const list = MODULES.filter(m=>{
+    if(activeCat!=="ALL" && m.category!==activeCat) return false;
+    if(!q) return true;
+    return (m.name+" "+m.one_liner+" "+m.description+" "+(m.services||[]).join(" ")).toLowerCase().includes(q);
+  });
+  const host = $("#modView");
+  host.innerHTML = `<div class="muted" style="margin-bottom:8px">${list.length} module(s)</div><div class="modlist" id="modList"></div>`;
+  const grid = host.querySelector("#modList");
+  list.forEach(m=>{
+    const d = document.createElement("div"); d.className="mod";
+    d.innerHTML = `<span class="cat">${esc(m.category)}</span><div class="nm">${esc(m.name)}</div><div class="ol">${esc(m.one_liner||"")}</div>`;
+    d.onclick = ()=> showDetail(m);
+    grid.appendChild(d);
+  });
+}
+function showDetail(m){
+  selected = m; $("#modBack").style.display = "block";
+  const host = $("#modView");
+  const argsHtml = (m.args||[]).map((a,i)=>{
+    const id = "arg_"+i;
+    const flag = esc(a.flag);
+    const field = a.is_switch
+      ? `<div class="switch"><input type="checkbox" id="${id}" data-flag="${flag}" data-switch="1"><label for="${id}" style="margin:0">enable ${flag}</label></div>`
+      : (a.choices
+          ? `<select id="${id}" data-flag="${flag}"><option value="">(unset)</option>${a.choices.map(c=>`<option>${esc(c)}</option>`).join("")}</select>`
+          : `<input type="text" id="${id}" data-flag="${flag}" placeholder="${a.default?('default: '+esc(a.default)):''}">`);
+    return `<div class="argrow"><div><div class="fl">${flag}${a.required?' <span style="color:var(--red)">*</span>':''}</div><div class="hp">${esc(a.help||"")}</div></div><div>${field}</div></div>`;
+  }).join("");
+  host.innerHTML = `
+    <div class="detail">
+      <span class="cat" style="float:right;font-size:11px;color:var(--muted)">${esc(m.category)}</span>
+      <div class="nm">${esc(m.name)}</div>
+      <div class="muted" style="margin-top:4px">${esc((m.services||[]).join(", "))}</div>
+      <div class="desc">${esc(m.description || m.one_liner || "")}</div>
+      ${argsHtml ? `<div class="argtbl">${argsHtml}</div>` : '<div class="muted" style="margin-top:10px">No arguments.</div>'}
+      <div class="cmdprev" id="cmdPrev"></div>
+      <div class="bar">
+        <button class="primary" id="runModule">Run module</button>
+        <button id="copyCmd" class="sm">Copy command</button>
+      </div>
+    </div>`;
+  host.querySelectorAll("input,select").forEach(el=> el.addEventListener("input", updatePrev));
+  $("#runModule").onclick = ()=> runCommand(buildCmd());
+  $("#copyCmd").onclick = ()=>{ navigator.clipboard.writeText(buildCmd()); toast("Command copied"); };
+  updatePrev();
+}
+function buildCmd(){
+  if(!selected) return "";
+  let parts = ["run", selected.name];
+  (selected.args||[]).forEach((a,i)=>{
+    const el = document.getElementById("arg_"+i); if(!el) return;
+    if(el.dataset.switch){ if(el.checked) parts.push(a.flag); }
+    else { const v=(el.value||"").trim(); if(v){ parts.push(a.flag); parts.push(qarg(v)); } }
+  });
+  return parts.join(" ");
+}
+function qarg(v){ return /[\s"'\\]/.test(v) ? '"'+v.replace(/(["\\])/g,'\\$1')+'"' : v; }
+function updatePrev(){ const p=$("#cmdPrev"); if(p) p.textContent = "Pacu> " + buildCmd(); }
+$("#modBack").onclick = renderList;
+$("#modSearch").addEventListener("input", renderList);
+
+/* ---------- tabs ---------- */
+let currentTab = "modules";
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function humanSize(n){ if(n<1024) return n+" B"; if(n<1048576) return (n/1024).toFixed(1)+" KB"; return (n/1048576).toFixed(1)+" MB"; }
+function switchTab(name){
+  currentTab = name;
+  document.querySelectorAll(".tab").forEach(t=> t.classList.toggle("active", t.dataset.tab===name));
+  ["modules","data","loot"].forEach(n=> $("#tab-"+n).hidden = (n!==name));
+  $("#tabRefresh").style.display = name==="modules" ? "none" : "block";
+  if(name==="data") loadData();
+  if(name==="loot") loadLoot();
+}
+document.querySelectorAll(".tab").forEach(t=> t.onclick = ()=> switchTab(t.dataset.tab));
+$("#tabRefresh").onclick = ()=> { if(currentTab==="data") loadData(); if(currentTab==="loot") loadLoot(); };
+
+/* ---------- session data ---------- */
+async function loadData(){
+  const host = $("#dataView"); host.innerHTML = '<div class="empty">Loading…</div>';
+  let d; try{ d = await api("/api/data"); }catch(e){ host.innerHTML = '<div class="empty">Error: '+esc(e.message)+'</div>'; return; }
+  const services = d.services || {};
+  const keys = Object.keys(services).sort();
+  $("#dataMeta").textContent = keys.length
+    ? `${keys.length} service(s) with data in session "${d.session}"`
+    : `No enumerated data yet in session "${d.session}". Run an enum module (e.g. aws__enum_account, ec2__enum).`;
+  host.innerHTML = "";
+  keys.forEach((k,i)=>{
+    const val = services[k];
+    let count = ""; try{ if(Array.isArray(val)) count = val.length+" item(s)"; else if(val && typeof val==="object") count = Object.keys(val).length+" key(s)"; }catch(e){}
+    const box = document.createElement("div");
+    box.className = "svc" + (i>0 ? " collapsed" : "");
+    box.innerHTML = `<h3>${esc(k)} <span class="cnt">${count}</span></h3><pre>${esc(JSON.stringify(val, null, 2))}</pre>`;
+    box.querySelector("h3").onclick = ()=> box.classList.toggle("collapsed");
+    host.appendChild(box);
+  });
+}
+
+/* ---------- loot / files ---------- */
+let lootActivePath = null;
+async function loadLoot(){
+  const list = $("#lootList");
+  list.innerHTML = '<div class="empty">Loading…</div>';
+  let d; try{ d = await api("/api/loot"); }catch(e){ list.innerHTML = '<div class="empty">Error: '+esc(e.message)+'</div>'; return; }
+  $("#lootMeta").innerHTML = `${d.files.length} file(s) in <code>${esc(d.root)}</code>`;
+  if(!d.files.length){
+    list.innerHTML = '<div class="empty">No files yet. Modules that download or export data write here.</div>';
+    $("#lootView").innerHTML = '<span class="empty">Select a file to view its contents.</span>';
+    $("#lootBar").hidden = true; lootActivePath = null;
+    return;
+  }
+  list.innerHTML = "";
+  d.files.forEach(f=>{
+    const el = document.createElement("div");
+    el.className = "lootf" + (f.path===lootActivePath ? " active" : "");
+    const when = new Date(f.mtime*1000).toLocaleString();
+    el.innerHTML = `<div class="pn">${esc(f.path)}</div><div class="meta">${humanSize(f.size)} · ${esc(when)}</div>`;
+    el.onclick = ()=> openLoot(f.path, el);
+    list.appendChild(el);
+  });
+}
+async function openLoot(path, el){
+  document.querySelectorAll(".lootf").forEach(x=> x.classList.remove("active"));
+  if(el) el.classList.add("active");
+  lootActivePath = path;
+  $("#lootFn").textContent = path;
+  $("#lootBar").hidden = false;
+  const view = $("#lootView"); view.textContent = "Loading…"; $("#lootSz").textContent = "";
+  let d; try{ d = await api("/api/loot/file?path="+encodeURIComponent(path)); }
+  catch(e){ view.textContent = "Error: "+e.message; return; }
+  $("#lootSz").textContent = humanSize(d.size) + (d.binary ? " · binary" : "");
+  if(d.binary){ view.innerHTML = `<span class="empty">Binary file (${humanSize(d.size)}). Use Download to save it.</span>`; return; }
+  view.textContent = d.text + (d.truncated ? "\n\n… [truncated — file larger than 2 MB. Use Download for the full file.]" : "");
+}
+function downloadLoot(){
+  if(!lootActivePath) return;
+  const a = document.createElement("a");
+  a.href = "/api/loot/download?path=" + encodeURIComponent(lootActivePath);
+  a.download = lootActivePath.split("/").pop();
+  document.body.appendChild(a); a.click(); a.remove();
+}
+$("#lootDownload").onclick = downloadLoot;
+
+/* ---------- boot ---------- */
+connectStream();
+refreshState();
+loadRegions();
+loadModules();
+setInterval(refreshState, 4000);
+setBusy(false);
+</script>
+</body>
+</html>
